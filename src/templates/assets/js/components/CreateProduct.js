@@ -78,6 +78,32 @@ const CreateProduct = (props) => {
     let saveProduct = (event) => {
         event.preventDefault();
         // TODO : write your code here to save the product
+
+
+
+
+        // let product = {
+        //     title: this.product_name,
+        //     sku: this.product_sku,
+        //     description: this.description,
+        //     product_image: this.images,
+        //     product_variant: this.product_variant,
+        //     product_variant_prices: this.product_variant_prices
+        // }
+    
+    
+        axios.post('/product', 'product').then(response => {
+            console.log(response.data);
+        }).catch(error => {
+            console.log(error);
+        })
+    
+        // console.log(product);
+          
+
+
+
+
     }
 
 

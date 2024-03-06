@@ -2,8 +2,11 @@ from typing import Any
 from django.db.models.query import QuerySet
 from product.serializers import (ProductSerializer,ProductVariantSerializer,ProductImageSerializer)
 from django.views import generic
-from rest_framework.views import APIView
 from django.db import transaction
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
 
 from product.models import (Variant,Product,ProductVariant)
 
@@ -18,25 +21,22 @@ class CreateProductView(generic.TemplateView):
         context['variants'] = list(variants.all())
         return context
     
-    
-class CreateProductAPIView(APIView):
+@method_decorator(csrf_exempt, name='dispatch')
+class CreateProductAPIView(View):
     product_serializer = ProductSerializer
     product_image_serializer = ProductImageSerializer
     product_variant_serializer = ProductVariantSerializer
     
     def post(self, request):
-        product_serializer = self.product_serializer(data=request.data)
-        product_image_serializer = self.product_image_serializer(data=request.data,many=True)
-        product_variant_serializer = self.product_variant_serializer(data=request.data,many=True)
-        
-        product_serializer.is_valid(raise_exception=True)
-        product_image_serializer.is_valid(raise_exception=True)
-        product_variant_serializer.is_valid(raise_exception=True)
-        
-        with transaction.atomic():
-            product = product_serializer.save()
-            
-            # for entry in product_image_serializer
+        # product_info = request.POST.get('product_info')
+        # media_files = request.POST.get('media_files')
+        # variants = request.POST.get('variants')
+
+        # print(product_info)
+        # print(media_files)
+        # print(variants)
+        print(request.POST)
+        return JsonResponse('ok',safe=False)
             
 
 class ProductListView(generic.ListView):
