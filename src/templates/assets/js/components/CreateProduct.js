@@ -2,10 +2,16 @@ import React, {useState} from 'react';
 import TagsInput from 'react-tagsinput';
 import 'react-tagsinput/react-tagsinput.css';
 import Dropzone from 'react-dropzone'
+import Axios from 'axios';
 
 
 const CreateProduct = (props) => {
-
+    const [form, setForm] = useState({
+        title:"",
+        sku: "",
+        description:""
+    })
+    
     const [productVariantPrices, setProductVariantPrices] = useState([])
 
     const [productVariants, setProductVariant] = useState([
@@ -14,18 +20,20 @@ const CreateProduct = (props) => {
             tags: []
         }
     ])
-    console.log(typeof props.variants)
-    // handle click event of the Add button
     const handleAddClick = () => {
-        let all_variants = JSON.parse(props.variants.replaceAll("'", '"')).map(el => el.id)
+        // return only id
+        let all_variants = JSON.parse(props.variants.replaceAll("'", '"')).map(el => {
+            return el.id
+        })
         let selected_variants = productVariants.map(el => el.option);
         let available_variants = all_variants.filter(entry1 => !selected_variants.some(entry2 => entry1 == entry2))
+        console.log(all_variants.filter(entry1 => !selected_variants.some(entry2 => entry1 == entry2)))
         setProductVariant([...productVariants, {
             option: available_variants[0],
             tags: []
         }])
     };
-
+    console.log({productVariants})
     // handle input change on tag input
     const handleInputTagOnChange = (value, index) => {
         let product_variants = [...productVariants]
@@ -49,7 +57,12 @@ const CreateProduct = (props) => {
         productVariants.filter((item) => {
             tags.push(item.tags)
         })
-
+variants: [
+    {
+        "option": 1,
+        "tags": ["",""]
+    }
+]
         setProductVariantPrices([])
 
         getCombn(tags).forEach(item => {
@@ -74,57 +87,57 @@ const CreateProduct = (props) => {
         return ans;
     }
 
-    // Save product
     let saveProduct = (event) => {
         event.preventDefault();
-        // TODO : write your code here to save the product
-
-
-
-
-        // let product = {
-        //     title: this.product_name,
-        //     sku: this.product_sku,
-        //     description: this.description,
-        //     product_image: this.images,
-        //     product_variant: this.product_variant,
-        //     product_variant_prices: this.product_variant_prices
-        // }
+    
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+    
+        const productObj = {
+            product_info: form,
+            variants: productVariants,
+            product_variant_prices: productVariantPrices,
+        };
+    
+        const data = JSON.stringify(productObj);
+    
+        Axios.post("http://localhost:8000/product/create/all", data, { headers: headers })
+            .then((resp) => {
+                console.log(resp);
+            })
+            .catch((error) => {
+                console.log("Product create error:", error);
+            });
+    };
     
     
-        axios.post('/product', 'product').then(response => {
-            console.log(response.data);
-        }).catch(error => {
-            console.log(error);
-        })
-    
-        // console.log(product);
-          
 
-
-
-
+    const handleOnChange = (e) => {
+        // console.log(e.target.name, e.target.value)
+        let label = e?.target?.name
+        let value = e.target.value
+        setForm((prev)=> ({...prev, [label]: value}))
     }
-
-
+    
     return (
         <div>
             <section>
-                <div className="row">
+                <form className="row" onSubmit={saveProduct} >
                     <div className="col-md-6">
                         <div className="card shadow mb-4">
                             <div className="card-body">
                                 <div className="form-group">
                                     <label htmlFor="">Product Name</label>
-                                    <input type="text" placeholder="Product Name" className="form-control"/>
+                                    <input type="text" placeholder="Product Name" className="form-control" name='productName' required  onChange={handleOnChange} />
                                 </div>
                                 <div className="form-group">
                                     <label htmlFor="">Product SKU</label>
-                                    <input type="text" placeholder="Product Name" className="form-control"/>
+                                    <input type="text" placeholder="Product Name" className="form-control" name='productSKU' required onChange={handleOnChange} />
                                 </div>
                                 <div className="form-group">
                                     <label htmlFor="">Description</label>
-                                    <textarea id="" cols="30" rows="4" className="form-control"></textarea>
+                                    <textarea id="" cols="30" rows="4" className="form-control" name='description' required onChange={handleOnChange} ></textarea>
                                 </div>
                             </div>
                         </div>
@@ -135,11 +148,11 @@ const CreateProduct = (props) => {
                                 <h6 className="m-0 font-weight-bold text-primary">Media</h6>
                             </div>
                             <div className="card-body border">
-                                <Dropzone onDrop={acceptedFiles => console.log(acceptedFiles)}>
+                                <Dropzone onDrop={acceptedFiles => console.log(acceptedFiles, "helo")}>
                                     {({getRootProps, getInputProps}) => (
                                         <section>
                                             <div {...getRootProps()}>
-                                                <input {...getInputProps()} />
+                                                <input {...getInputProps()} type='file' />
                                                 <p>Drag 'n' drop some files here, or click to select files</p>
                                             </div>
                                         </section>
@@ -239,10 +252,11 @@ const CreateProduct = (props) => {
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <button type="button" onClick={saveProduct} className="btn btn-lg btn-primary">Save</button>
+                    <button type="submit"  className="btn btn-lg btn-primary">Save</button>
                 <button type="button" className="btn btn-secondary btn-lg">Cancel</button>
+                </form>
+
+               
             </section>
         </div>
     );
