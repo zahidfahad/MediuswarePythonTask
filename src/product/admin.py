@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Product,ProductVariant,ProductVariantPrice
+from .models import Product,ProductVariant,ProductVariantPrice,ProductImage
 
 # Register your models here.
 
@@ -7,3 +7,4 @@ from .models import Product,ProductVariant,ProductVariantPrice
 admin.site.register(Product)
 admin.site.register(ProductVariant)
 admin.site.register(ProductVariantPrice)
+admin.site.register(ProductImage)

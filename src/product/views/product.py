@@ -9,8 +9,14 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse,QueryDict
 import json
-
-from product.models import (Variant,Product,ProductVariant,ProductVariantPrice)
+import os
+import base64
+from django.core.files.storage import default_storage
+from datetime import datetime
+from django.core.files.base import ContentFile
+from django.conf import settings
+from product.models import (Variant,Product,ProductVariant,ProductVariantPrice,ProductImage)
+from django.db.models import Q
 
 
 
@@ -37,46 +43,51 @@ class CreateProductView(View):
             query_dict = QueryDict('', mutable=True)
             query_dict.update(data)
 
-
             product_info = query_dict.get('product_info')
             product_variants = query_dict.get('variants')
             product_variant_prices = query_dict.get('product_variant_prices')
+            files = query_dict.get('files')
 
-            print(product_info)
-            print(product_variants)
-            print(product_variant_prices)
-            
             with transaction.atomic():
-                product = Product.objects.create(title=product_info['title'],sku=product_info['sku'],description=product_info['description'])
+                date = datetime.now()
+                sku = str(product_info['sku']) + str(datetime.timestamp(date)).replace('.','')
+                product = Product.objects.create(title=product_info['title'],sku=sku,description=product_info['description'])
                 ProductVariant.objects.bulk_create([ProductVariant(
                     variant_title=(',').join(tag for tag in i['tags']),
                     variant_id=i['option'],
                     product=product
                 ) for i in product_variants])
-
-
-                for price in product_variant_prices:
-                    pass
                 
-                # ProductVariantPrice.objects.bulk_create([ProductVariantPrice(
-                        
-                #     ) for i in product_variant_prices])
+                product_variant_ids = []
+                for i in product_variants:
+                    product_variant = ProductVariant.objects.create(
+                        variant_title=(',').join(tag for tag in i['tags']),
+                        variant_id=i['option'],
+                        product=product
+                    )
+                    product_variant_ids.append(product_variant.id)
 
-            # Your further processing logic here
-
+                
+                product_variants_qs = ProductVariant.objects.filter(id__in=product_variant_ids)
+                ProductVariantPrice.objects.bulk_create([ProductVariantPrice(
+                        product_variant_one = product_variants_qs.last(),
+                        price = i['price'],
+                        stock= i['stock'],
+                        product=product
+                    ) for i in product_variant_prices])
+                
+                for idx, file in enumerate(files):
+                    try:
+                        _format, imgstr = file.split(';base64,')
+                        ext = _format.split('/')[-1]
+                        data = ContentFile(base64.b64decode(imgstr), name=f'img{idx}.{ext}')
+                        media_path = default_storage.save(os.path.join('productimages', f'img{idx}.{ext}'), data)
+                        product_image = ProductImage.objects.create(product=product, file_path=media_path)
+                    except Exception as e:
+                        print(f"Error processing image {idx}: {e}")
             return JsonResponse({"product_id": 'prod'}, safe=False)
-
         except json.JSONDecodeError as e:
-            # Handle JSON decoding error
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
-    
-class UploadImages(View):
-    product_image_serializer = ProductImageSerializer
-    def post(self, request, *args, **kwargs):
-        print(request.FILES)
-        print(request.POST)
-        # for file in 
-        return JsonResponse("ok",safe=False)
 
             
 
@@ -84,7 +95,7 @@ class ProductListView(generic.ListView):
     template_name = 'products/list.html'
     model = Product
     context_object_name = 'product_list'
-    paginate_by = 1
+    paginate_by = 5
     
     def get_filter_kwargs(self):
         params = {}
@@ -115,7 +126,11 @@ class ProductListView(generic.ListView):
         
     def get_queryset(self) -> QuerySet[Any]:
         filter_kwargs = self.get_filter_kwargs()
-        qs = self.model._default_manager.filter()
-        return qs
+        # actually there are 3 models for the filter
+        #  i am a little bit confused about the variant and price will how be merged with product title
+        if filter_kwargs:
+            qs = self.model._default_manager.filter(Q(created_at__date=filter_kwargs.get('created_at'))|Q(title__iexact=filter_kwargs.get('title')))
+            return qs
+        return self.model._default_manager.all()
     
         

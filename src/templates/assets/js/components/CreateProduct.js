@@ -11,7 +11,8 @@ const CreateProduct = (props) => {
         sku: "",
         description:""
     })
-    
+    const [base64Strings, setBase64Strings] = useState([]);
+
     const [productVariantPrices, setProductVariantPrices] = useState([])
 
     const [productVariants, setProductVariant] = useState([
@@ -98,11 +99,12 @@ variants: [
             product_info: form,
             variants: productVariants,
             product_variant_prices: productVariantPrices,
+            files: base64Strings
         };
     
         const data = JSON.stringify(productObj);
     
-        Axios.post("http://localhost:8000/product/create/all", data, { headers: headers })
+        Axios.post("http://127.0.0.1:8000/product/create/all", data, { headers: headers })
             .then((resp) => {
                 console.log(resp);
             })
@@ -119,6 +121,28 @@ variants: [
         let value = e.target.value
         setForm((prev)=> ({...prev, [label]: value}))
     }
+    const handleFileInputChange = (event) => {
+        const files = event.target.files;
+    
+        if (files.length > 0) {
+          const newBase64Strings = [];
+    
+          Array.from(files).forEach((file) => {
+            const reader = new FileReader();
+    
+            reader.onloadend = () => {
+              const base64String = reader.result;
+              newBase64Strings.push(base64String);
+    
+              if (newBase64Strings.length === files.length) {
+                setBase64Strings(newBase64Strings);
+              }
+            };
+    
+            reader.readAsDataURL(file);
+          });
+        }
+      };
     
     return (
         <div>
@@ -148,7 +172,7 @@ variants: [
                                 <h6 className="m-0 font-weight-bold text-primary">Media</h6>
                             </div>
                             <div className="card-body border">
-                                <Dropzone onDrop={acceptedFiles => console.log(acceptedFiles, "helo")}>
+                                {/* <Dropzone onDrop={acceptedFiles => handleFileInputChange(acceptedFiles)}>
                                     {({getRootProps, getInputProps}) => (
                                         <section>
                                             <div {...getRootProps()}>
@@ -157,7 +181,9 @@ variants: [
                                             </div>
                                         </section>
                                     )}
-                                </Dropzone>
+                                </Dropzone> */}
+                                <input type="file" onChange={handleFileInputChange} multiple />
+
                             </div>
                         </div>
                     </div>
